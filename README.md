@@ -1,5 +1,6 @@
 # camp-sim-alpha
 N인 합숙 시뮬레이션 알파버전
+
 ## 실행
 Streamlit 기반 알파 버전입니다.
 
