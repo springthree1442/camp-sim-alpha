@@ -1,6 +1,6 @@
 import streamlit as st
 
-st.set_page_config(page_title="N인 합숙 시뮬 (베타)", layout="wide")
+st.set_page_config(page_title="N인 합숙 시뮬 (베타2)", layout="wide")
 
 MAX_DAYS = 14
 MBTI_LIST = [
@@ -10,7 +10,7 @@ MBTI_LIST = [
     "ISTP","ESTP","ISFP","ESFP"
 ]
 
-# ---------------- 룰(베타1: 알파 룰 유지) ----------------
+# ---------------- 룰(베타1 유지) ----------------
 MBTI_PREF = {
     "INTJ":"plan","ENTJ":"plan","INTP":"logic","ENTP":"logic",
     "INFJ":"care","ENFJ":"care","INFP":"emotion","ENFP":"emotion",
@@ -55,16 +55,39 @@ def ending_result(aff):
         return f"특별한 관계 엔딩: {top_name}"
     return "노말엔딩"
 
+# ---------------- 관계 상태(호감도 -> 텍스트) ----------------
+def relation_label(score: int) -> str:
+    # 엔딩 기준(25+)과 분열 조건(18+)에 맞춰 단계 설계
+    if score <= -10:
+        return "혐오"
+    if score <= -5:
+        return "싫어함"
+    if score <= 4:
+        return "보통"
+    if score <= 12:
+        return "호감"
+    if score <= 17:
+        return "친함"
+    if score <= 24:
+        return "설렘"
+    return "특별한 관계"
+
+# 호감도 바 표시용(0~100%)
+def affinity_to_percent(score, min_s=-20, max_s=40):
+    if score < min_s: score = min_s
+    if score > max_s: score = max_s
+    return int(round((score - min_s) * 100 / (max_s - min_s)))
+
 # ---------------- 상태 ----------------
 def reset_all():
     st.session_state.started = False
     st.session_state.day = 1
-    st.session_state.people = []     # [{"name","mbti"}], 사용자 제외 캐릭터만 저장
-    st.session_state.aff = {}        # {name: score}
+    st.session_state.people = []          # [{"name","mbti"}]
+    st.session_state.aff = {}             # {name: score}
     st.session_state.log = []
     st.session_state.selected = None
-    st.session_state.acted_today = set()   # 오늘 행동한 인물들
-    st.session_state.gift_used = False     # 오늘 선물 사용 여부
+    st.session_state.acted_today = set()  # 오늘 행동한 인물
+    st.session_state.gift_used = False    # 오늘 선물 사용 여부
 
 if "started" not in st.session_state:
     reset_all()
@@ -86,21 +109,55 @@ def next_day():
         st.session_state.gift_used = False
         st.session_state.log.append(f"--- Day {st.session_state.day} 시작 ---")
 
-# 호감도 바 표시용(범위 매핑)
-def affinity_to_progress(score, min_s=-20, max_s=40):
-    # score를 0~1로 변환
-    if score < min_s: score = min_s
-    if score > max_s: score = max_s
-    return (score - min_s) / (max_s - min_s)
+# ---------------- CSS (분홍 바, 카드 버튼 스타일) ----------------
+st.markdown("""
+<style>
+/* 카드처럼 보이는 버튼 */
+div.stButton > button {
+  width: 100%;
+  text-align: left;
+  border-radius: 14px;
+  border: 2px solid #E5E5E5;
+  background: white;
+  padding: 12px 12px;
+  margin-bottom: 10px;
+}
+
+/* 선택된 카드 강조(선택 상태에서만 아래 클래스를 추가로 렌더링) */
+.card-selected {
+  border: 2px solid #ff4fa3 !important;
+  background: #fff0f7 !important;
+}
+
+/* 카드 안 텍스트 */
+.card-title { font-size: 18px; font-weight: 800; margin-bottom: 2px; }
+.card-sub { opacity: 0.8; margin-bottom: 8px; }
+.card-meta { font-size: 13px; opacity: 0.85; margin-top: 6px; }
+
+/* 분홍 진행 바(HTML 바) */
+.pbar-wrap{
+  width: 100%;
+  height: 10px;
+  border-radius: 999px;
+  background: #f2f2f2;
+  overflow: hidden;
+}
+.pbar-fill{
+  height: 100%;
+  background: #ff4fa3; /* 핑크 */
+  border-radius: 999px;
+}
+</style>
+""", unsafe_allow_html=True)
 
 # ---------------- UI ----------------
-st.title("🏠 N인 합숙 시뮬레이션 (베타)")
+st.title("🏠 N인 합숙 시뮬레이션 (베타2)")
 
 tab1, tab2 = st.tabs(["1) 시작 설정", "2) 플레이"])
 
 # ====== 1) 시작 설정 ======
 with tab1:
-    st.subheader("인물 생성 (MBTI는 드롭다운 선택)")
+    st.subheader("인물 생성 (MBTI 드롭다운)")
     n = st.number_input("추가할 인물 수(1~12)", 1, 12, 4, 1)
 
     chars = []
@@ -115,7 +172,7 @@ with tab1:
 
     c1, c2 = st.columns([1, 1])
     with c1:
-        if st.button("게임 시작(베타)", type="primary"):
+        if st.button("게임 시작(베타2)", type="primary"):
             start_game(chars)
             st.success("시작 완료! '플레이' 탭으로 이동하세요.")
     with c2:
@@ -129,64 +186,52 @@ with tab2:
         st.info("먼저 '시작 설정'에서 게임을 시작하세요.")
         st.stop()
 
-    # 상단 상태
-    top_left, top_right = st.columns([1, 1])
-    with top_left:
-        st.metric("DAY", f"{st.session_state.day} / {MAX_DAYS}")
-    with top_right:
-        if st.button("다음 날"):
-            if st.session_state.day >= MAX_DAYS:
-                st.warning("이미 마지막 날입니다.")
-            else:
-                next_day()
-                st.success("다음 날로 넘어갔습니다.")
-
+    st.metric("DAY", f"{st.session_state.day} / {MAX_DAYS}")
     st.divider()
 
-    # -------- 캐릭터 카드 영역 (클릭으로 선택) --------
-    st.subheader("👥 캐릭터 카드 (카드를 눌러 선택)")
+    # -------- 캐릭터 카드: 버튼 자체가 카드(누르면 선택) --------
+    st.subheader("👥 캐릭터 카드 (카드를 누르면 바로 선택)")
 
-    # 카드 그리드(3열)
     cols = st.columns(3)
     for idx, c in enumerate(st.session_state.people):
         name = c["name"]
         mbti = c["mbti"]
         score = st.session_state.aff.get(name, 0)
-        progress = affinity_to_progress(score)
+        pct = affinity_to_percent(score)
+        rel = relation_label(score)
+        selected = (st.session_state.selected == name)
 
         with cols[idx % 3]:
-            selected = (st.session_state.selected == name)
+            # 버튼을 카드처럼 쓰되, 버튼 텍스트는 비우고 "아래 HTML"로 카드 내용 렌더
+            # 클릭 이벤트는 버튼이 담당
+            if st.button("", key=f"card_{name}"):
+                st.session_state.selected = name
+                st.rerun()
 
-            # 카드 스타일(선택 표시)
+            # 선택 강조를 HTML 영역에서 보여주기
+            sel_class = "card-selected" if selected else ""
             st.markdown(
                 f"""
-                <div style="
-                    border: 2px solid {'#4CAF50' if selected else '#DDD'};
-                    border-radius: 12px;
-                    padding: 12px;
-                    margin-bottom: 12px;
-                    background: {'#F3FFF3' if selected else '#FFFFFF'};
-                ">
-                    <div style="font-size:18px; font-weight:700;">{name}</div>
-                    <div style="opacity:0.8;">MBTI: {mbti}</div>
+                <div class="{sel_class}" style="border-radius:14px; padding:12px; margin-top:-54px;">
+                  <div class="card-title">{name}</div>
+                  <div class="card-sub">MBTI: {mbti}</div>
+
+                  <div class="pbar-wrap">
+                    <div class="pbar-fill" style="width:{pct}%;"></div>
+                  </div>
+
+                  <div class="card-meta">호감도: <b>{score}</b> · 생각: <b>{rel}</b></div>
                 </div>
                 """,
                 unsafe_allow_html=True
             )
 
-            st.progress(progress)
-            st.caption(f"호감도: {score}")
-
-            # “카드 클릭”은 버튼으로 구현 (Streamlit 한계)
-            if st.button("이 인물 선택", key=f"sel_{name}"):
-                st.session_state.selected = name
-
     st.divider()
 
-    # -------- 행동/선물 패널 --------
+    # -------- 선택된 인물 패널 --------
     sel = st.session_state.selected
     if not sel:
-        st.warning("선택된 인물이 없습니다. 위 카드에서 인물을 선택하세요.")
+        st.warning("선택된 인물이 없습니다. 카드에서 인물을 선택하세요.")
         st.stop()
 
     sel_mbti = next(p["mbti"] for p in st.session_state.people if p["name"] == sel)
@@ -194,7 +239,7 @@ with tab2:
     left, right = st.columns([1, 1])
 
     with left:
-        st.subheader("🗣️ 오늘 행동")
+        st.subheader(f"🗣️ 오늘 행동 (대상: {sel})")
         st.caption("행동은 **인물당 하루 1회**만 가능합니다.")
         choice = st.radio("행동 타입", ["care", "emotion", "logic", "plan", "fun", "rule"], horizontal=True)
 
@@ -204,14 +249,14 @@ with tab2:
             st.session_state.aff[sel] += d
             st.session_state.acted_today.add(sel)
             st.session_state.log.append(f"Day {st.session_state.day}: {sel}에게 '{choice}' → {d:+d}")
-            st.success(f"{sel} 호감도 {d:+d} (즉시 반영됨)")
+            st.success(f"{sel} 호감도 {d:+d}")
             st.rerun()
 
         if already_acted:
             st.info("오늘은 이 인물에게 이미 행동을 했습니다. (인물당 1회 제한)")
 
     with right:
-        st.subheader("🎁 선물")
+        st.subheader(f"🎁 선물 (대상: {sel})")
         st.caption("선물은 **하루 1회, 단 1명에게만** 가능합니다.")
         gift = st.selectbox("선물 타입", ["sweet", "book", "handmade", "practical", "game"])
 
@@ -220,11 +265,25 @@ with tab2:
             st.session_state.aff[sel] += d
             st.session_state.gift_used = True
             st.session_state.log.append(f"Day {st.session_state.day}: {sel}에게 선물({gift}) → {d:+d}")
-            st.success(f"{sel} 호감도 {d:+d} (즉시 반영됨)")
+            st.success(f"{sel} 호감도 {d:+d}")
             st.rerun()
 
         if st.session_state.gift_used:
             st.info("오늘은 이미 선물을 사용했습니다. (하루 1회 제한)")
+
+    # ✅ 요청: 다음 날 버튼을 오늘행동/선물 창 아래로 이동
+    st.divider()
+    n1, n2 = st.columns([1, 2])
+    with n1:
+        if st.button("다음 날 ▶️"):
+            if st.session_state.day >= MAX_DAYS:
+                st.warning("이미 마지막 날입니다.")
+            else:
+                next_day()
+                st.success("다음 날로 넘어갔습니다.")
+                st.rerun()
+    with n2:
+        st.caption("다음 날이 되면: 행동 제한/선물 제한이 초기화됩니다.")
 
     st.divider()
 
