@@ -55,23 +55,24 @@ def apply_gift(mbti, gtype):
     fav = MBTI_GIFT_FAV.get(mbti)
     return base + (2 if fav == gtype else 0)
 
+# ✅ Special End: MBTI는 반드시 대문자 키로
 SPECIAL_END_TEXT = {
-    “Istj” : “이 말 하기까지 오래 고민했어. 가볍게 하는 말은 아니고 나 너 좋아해.”,
-“Isfj” : “혹시 부담되면 말해줘. 그래도… 네 생각을 자주 하게 돼서, 그냥 말하고 싶었어.",
-“Intj” : “감정적으로 정리해 봤는데, 이건 일시적인 호감은 아닌 것 같아. 좋아해.”,
-“Infj” : “네가 웃을 때마다 마음이 조용해져. 이 감정, 숨기고 싶지 않았어.”,
-“Istp” : “이런 말 잘 안 하는데… 같이 있으면 편하고 좋아. 그래서 널 좋아해.”,
-“Isfp” : “그냥… 네 생각하면 마음이 따뜻해져. 그게 좋아하는 거겠지.”,
-“Intp” : “이 감정이 뭔지 한참 분석해봤는데, 결론은 하나네. 좋아해.”,
-“Infp” : “말로 다 못 설명하겠지만… 너는 내 하루를 바꾸는 사람이야.”,
-“Estj” : “돌려 말 안 할게. 나는 당신이 좋고, 진지하게 만나보고 싶어.”,
-“Esfj” : “네가 웃으면 나도 따라 웃게 돼. 그게 좋아하는 마음인 것 같아.”,
-“Entj” : “시간 낭비는 싫어서 솔직하게 말할게. 너한테 관심 있고, 더 알고 싶어.”,
-“Enfj” : 네가 얼마나 좋은 사람인지 계속 느끼고 있어. 그래서 내 마음도 전하고 싶었어.”,
-“Estp” : “지금 말 안 하면 후회할 것 같아서. 나, 너 좋아해.”,
-“Esfp” : “너랑 있으면 하루가 재밌어져! 그래서… 좋아해..!”,
-“Entp” : “이건 실험 결과인데—네 옆에 있으면 기분이 확실히 좋아져. ...좋아해.”,
-“Enfp” : “이상하게, 네 얘기만 나오면 괜히 웃게 돼. 그게 사랑일지도.”
+    "ISTJ": "이 말 하기까지 오래 고민했어. 가볍게 하는 말은 아니고… 나 너 좋아해.",
+    "ISFJ": "혹시 부담되면 말해줘. 그래도… 네 생각을 자주 하게 돼서, 그냥 말하고 싶었어.",
+    "INTJ": "감정적으로 정리해 봤는데, 이건 일시적인 호감은 아닌 것 같아. 좋아해.",
+    "INFJ": "네가 웃을 때마다 마음이 조용해져. 이 감정, 숨기고 싶지 않았어.",
+    "ISTP": "이런 말 잘 안 하는데… 같이 있으면 편하고 좋아. 그래서 널 좋아해.",
+    "ISFP": "그냥… 네 생각하면 마음이 따뜻해져. 그게 좋아하는 거겠지.",
+    "INTP": "이 감정이 뭔지 한참 분석해봤는데, 결론은 하나네. 좋아해.",
+    "INFP": "말로 다 못 설명하겠지만… 너는 내 하루를 바꾸는 사람이야.",
+    "ESTJ": "돌려 말 안 할게. 나는 네가 좋고, 진지하게 만나보고 싶어.",
+    "ESFJ": "네가 웃으면 나도 따라 웃게 돼. 그게 좋아하는 마음인 것 같아.",
+    "ENTJ": "시간 낭비는 싫어서 솔직하게 말할게. 너한테 관심 있고, 더 알고 싶어.",
+    "ENFJ": "네가 얼마나 좋은 사람인지 계속 느끼고 있어. 그래서 내 마음도 전하고 싶었어.",
+    "ESTP": "지금 말 안 하면 후회할 것 같아서. 나, 너 좋아해.",
+    "ESFP": "너랑 있으면 하루가 재밌어져! 그래서… 좋아해..!",
+    "ENTP": "이건 실험 결과인데—네 옆에 있으면 기분이 확실히 좋아져. ...좋아해.",
+    "ENFP": "이상하게, 네 얘기만 나오면 괜히 웃게 돼. 그게 사랑일지도.",
 }
 
 def ending_result(aff):
@@ -82,30 +83,22 @@ def ending_result(aff):
     avg = sum(scores) / len(scores)
     low_cnt = sum(1 for s in scores if s <= -5)
 
-    # ❌ 고립/특수 엔딩 우선 처리
     if avg < -3:
         return ["[Bad End] 누구와도 가까워지지 못했다…"]
 
     if low_cnt >= max(2, len(scores)//2):
         return ["[Easter Egg] 그렇게 나는 히키코모리가 되었다…"]
 
-    # ✅ 특별한 관계인 인물들 전부 찾기
-    special_people = [
-        name for name, score in aff.items() if score >= 25
-    ]
+    special_people = [name for name, score in aff.items() if score >= 25]
 
     if special_people:
         results = []
         for name in special_people:
-            mbti = next(
-                (p["mbti"] for p in st.session_state.people if p["name"] == name),
-                "INFP"
-            )
+            mbti = next((p["mbti"] for p in st.session_state.people if p["name"] == name), "INFP")
             msg = SPECIAL_END_TEXT.get(mbti, "그 여름, 우리는 특별해졌다.")
             results.append(f"[Special End] {name} — {msg}")
         return results
 
-    # ✅ 조건을 만족하는 Special End가 없을 때
     return ["[Normal End] 무사히 합숙을 끝마쳤다."]
 
 def relation_label(score):
@@ -114,10 +107,10 @@ def relation_label(score):
     if score <= -19: return "싫어함"
     if score <= -5:  return "불편함"
     if score <= 4:   return "어색함"
-    if score <= 7:  return "친함"
+    if score <= 7:   return "친함"
     if score <= 35:  return "매우 친함"
     if score <= 60:  return "약간 호감"
-    if score <= 85: return "호감"
+    if score <= 85:  return "호감"
     if score <= 120: return "설렘"
     if score <= 188: return "짝사랑"
     return "특별한 관계"
@@ -126,7 +119,6 @@ def affinity_to_percent(score, min_s=-20, max_s=40):
     score = max(min(score, max_s), min_s)
     return int((score - min_s) * 100 / (max_s - min_s))
 
-# ✅ 점수에 따라 바 색상 선택 (0=회색 / 음수=파랑 / 양수=핑크)
 def bar_color(score: int) -> str:
     if score == 0:
         return "#BDBDBD"   # gray
@@ -169,8 +161,7 @@ def next_day():
 st.markdown("""
 <style>
 .card {border:2px solid #E5E5E5;border-radius:14px;padding:12px;margin-bottom:12px;background:white;}
-/* ✅ 선택된 카드: 초록색 */
-.card-selected {border:2px solid #22c55e;background:#ecfdf5;} /* green */
+.card-selected {border:2px solid #22c55e;background:#ecfdf5;}
 .pbar-wrap{height:10px;background:#eee;border-radius:999px;overflow:hidden;}
 .pbar-fill{height:100%;border-radius:999px;}
 div.stButton>button, div.stFormSubmitButton>button {color:#111 !important;}
@@ -191,8 +182,6 @@ tab1, tab2 = st.tabs(["1) 시작 설정", "2) 플레이"])
 # ===== 시작 설정 =====
 with tab1:
     st.subheader("인물 생성")
-
-    # ✅ 기본값 2명으로 변경
     n = st.number_input("추가할 인물 수(1~12)", 1, 12, 2, 1)
 
     with st.form("setup_form"):
@@ -225,7 +214,6 @@ with tab2:
 
     st.metric("DAY", f"{st.session_state.day}/{MAX_DAYS}")
 
-    # ✅ 인게임 안내(선물 제한)
     st.markdown(
         "<div class='notice'>🎁 <b>선물은 하루에 1번, 단 1명에게만</b> 줄 수 있어요.</div>",
         unsafe_allow_html=True
@@ -233,16 +221,14 @@ with tab2:
 
     st.divider()
 
-    # 캐릭터 카드
     st.subheader("👥 캐릭터 카드")
     cols = st.columns(3)
     for i, c in enumerate(st.session_state.people):
         name = c["name"]
-        score = st.session_state.aff[name]
+        score = st.session_state.aff.get(name, 0)
         pct = affinity_to_percent(score)
         rel = relation_label(score)
         selected = (st.session_state.selected == name)
-
         fill_color = bar_color(score)
 
         with cols[i % 3]:
@@ -273,7 +259,6 @@ with tab2:
 
     st.subheader(f"🎯 선택된 인물: {sel}")
 
-    # 팝업처럼 뜨는 상호작용 (popover)
     with st.popover("상호작용하기 (행동/선물)"):
         st.caption("행동: 인물당 하루 1회 / 선물: 하루 1회(1명에게만)")
 
@@ -290,7 +275,9 @@ with tab2:
             d = apply_choice(sel_mbti, action)
             st.session_state.aff[sel] += d
             st.session_state.acted_today.add(sel)
-            st.session_state.log.append(f"Day {st.session_state.day}: {sel}에게 {ACTION_LABEL[action]} → {d:+d}")
+            st.session_state.log.append(
+                f"Day {st.session_state.day}: {sel}에게 {ACTION_LABEL[action]} → {d:+d}"
+            )
             st.success(f"호감도 {d:+d}")
             st.rerun()
 
@@ -307,13 +294,14 @@ with tab2:
             d = apply_gift(sel_mbti, gift)
             st.session_state.aff[sel] += d
             st.session_state.gift_used = True
-            st.session_state.log.append(f"Day {st.session_state.day}: {sel}에게 선물({GIFT_LABEL[gift]}) → {d:+d}")
+            st.session_state.log.append(
+                f"Day {st.session_state.day}: {sel}에게 선물({GIFT_LABEL[gift]}) → {d:+d}"
+            )
             st.success(f"호감도 {d:+d}")
             st.rerun()
 
     st.divider()
 
-    # 다음 날
     c1, c2 = st.columns([1, 2])
     with c1:
         if st.button("다음 날 ▶️", disabled=st.session_state.day >= MAX_DAYS):
@@ -324,11 +312,12 @@ with tab2:
 
     st.divider()
 
-    # 엔딩보기: 14일 지나야 표시
     if st.session_state.day >= MAX_DAYS:
         if st.button("엔딩 보기"):
             st.subheader("🎬 엔딩")
-            st.write(ending_result(st.session_state.aff))
+            results = ending_result(st.session_state.aff)
+            for r in results:
+                st.write(r)
     else:
         st.caption("엔딩은 Day 14가 되면 확인할 수 있습니다.")
 
