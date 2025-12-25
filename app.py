@@ -76,26 +76,37 @@ SPECIAL_END_TEXT = {
 
 def ending_result(aff):
     if not aff:
-        return "[Normal End] 무사히 합숙을 끝마쳤다."
+        return ["[Normal End] 무사히 합숙을 끝마쳤다."]
 
     scores = list(aff.values())
-    top_name = max(aff, key=aff.get)
-    top = aff[top_name]
     avg = sum(scores) / len(scores)
     low_cnt = sum(1 for s in scores if s <= -5)
 
+    # ❌ 고립/특수 엔딩 우선 처리
     if avg < -3:
-        return "[Bad End] 누구와도 가까워지지 못했다…"
-    if top >= 18 and low_cnt >= max(2, len(scores)//2):
-        return "[Easter Egg] 그렇게 나는 히키코모리가 되었다…"
+        return ["[Bad End] 누구와도 가까워지지 못했다…"]
 
-    if top >= 25:
-        # ✅ top_name의 MBTI 찾아서 MBTI별 문구 출력
-        top_mbti = next((p["mbti"] for p in st.session_state.people if p["name"] == top_name), "INFP")
-        msg = SPECIAL_END_TEXT.get(top_mbti, "특별한 관계가 되었다.")
-        return f"[Special End] {top_name} - {msg}"
+    if low_cnt >= max(2, len(scores)//2):
+        return ["[Easter Egg] 그렇게 나는 히키코모리가 되었다…"]
 
-    return "[Normal End] 무사히 합숙을 끝마쳤다."
+    # ✅ 특별한 관계인 인물들 전부 찾기
+    special_people = [
+        name for name, score in aff.items() if score >= 25
+    ]
+
+    if special_people:
+        results = []
+        for name in special_people:
+            mbti = next(
+                (p["mbti"] for p in st.session_state.people if p["name"] == name),
+                "INFP"
+            )
+            msg = SPECIAL_END_TEXT.get(mbti, "그 여름, 우리는 특별해졌다.")
+            results.append(f"[Special End] {name} — {msg}")
+        return results
+
+    # ✅ 조건을 만족하는 Special End가 없을 때
+    return ["[Normal End] 무사히 합숙을 끝마쳤다."]
 
 def relation_label(score):
     if score <= -40: return "혐오"
