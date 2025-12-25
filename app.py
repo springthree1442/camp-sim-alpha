@@ -75,6 +75,20 @@ SPECIAL_END_TEXT = {
     "ENFP": "이상하게, 네 얘기만 나오면 괜히 웃게 돼. 그게 사랑일지도.",
 }
 
+# ✅ 관계 상태(연인 직전 단계 제거 / 혐오 -30 / 특별한 관계 160+)
+def relation_label(score):
+    if score <= -30: return "혐오"
+    if score <= -20: return "무시"
+    if score <= -10: return "싫어함"
+    if score <= -1:  return "불편함"
+    if score <= 5:   return "어색함"
+    if score <= 15:  return "친함"
+    if score <= 35:  return "매우 친함"
+    if score <= 60:  return "약간 호감"
+    if score <= 85:  return "호감"
+    if score <= 159: return "설렘"
+    return "특별한 관계"
+
 def ending_result(aff):
     if not aff:
         return ["[Normal End] 무사히 합숙을 끝마쳤다."]
@@ -89,7 +103,11 @@ def ending_result(aff):
     if low_cnt >= max(2, len(scores)//2):
         return ["[Easter Egg] 그렇게 나는 히키코모리가 되었다…"]
 
-    special_people = [name for name, score in aff.items() if score >= 25]
+    # ✅ 특별한 관계일 때만 Special End 출력
+    special_people = [
+        name for name, score in aff.items()
+        if relation_label(score) == "특별한 관계"
+    ]
 
     if special_people:
         results = []
@@ -100,20 +118,6 @@ def ending_result(aff):
         return results
 
     return ["[Normal End] 무사히 합숙을 끝마쳤다."]
-
-def relation_label(score):
-    if score <= -40: return "혐오"
-    if score <= -35: return "무시"
-    if score <= -19: return "싫어함"
-    if score <= -5:  return "불편함"
-    if score <= 4:   return "어색함"
-    if score <= 7:   return "친함"
-    if score <= 35:  return "매우 친함"
-    if score <= 60:  return "약간 호감"
-    if score <= 85:  return "호감"
-    if score <= 120: return "설렘"
-    if score <= 188: return "짝사랑"
-    return "특별한 관계"
 
 def affinity_to_percent(score, min_s=-20, max_s=40):
     score = max(min(score, max_s), min_s)
@@ -285,7 +289,7 @@ with tab2:
         gift = st.selectbox(
             "선물을 선택하세요",
             list(GIFT_LABEL.keys()),
-            format_func=lambda k: GIFT_LABEL[k],
+            format_func=lambda k: GIFT_LABEL[gift] if gift in GIFT_LABEL else gift,
             key="gift_pick"
         )
         gift_disabled = st.session_state.gift_used
