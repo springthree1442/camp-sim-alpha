@@ -86,6 +86,14 @@ def affinity_to_percent(score, min_s=-20, max_s=40):
     score = max(min(score, max_s), min_s)
     return int((score - min_s) * 100 / (max_s - min_s))
 
+# ✅ 점수에 따라 바 색상 선택 (0=회색 / 음수=파랑 / 양수=핑크)
+def bar_color(score: int) -> str:
+    if score == 0:
+        return "#BDBDBD"   # gray
+    if score < 0:
+        return "#3B82F6"   # blue
+    return "#ff4fa3"       # pink
+
 # ---------------- 상태 ----------------
 def reset_all():
     st.session_state.started = False
@@ -121,10 +129,17 @@ def next_day():
 st.markdown("""
 <style>
 .card {border:2px solid #E5E5E5;border-radius:14px;padding:12px;margin-bottom:12px;background:white;}
-.card-selected {border:2px solid #ff4fa3;background:#fff0f7;}
+/* ✅ 선택된 카드: 초록색 */
+.card-selected {border:2px solid #22c55e;background:#ecfdf5;} /* green */
 .pbar-wrap{height:10px;background:#eee;border-radius:999px;overflow:hidden;}
-.pbar-fill{height:100%;background:#ff4fa3;border-radius:999px;}
+.pbar-fill{height:100%;border-radius:999px;}
 div.stButton>button, div.stFormSubmitButton>button {color:#111 !important;}
+.notice {
+  padding: 10px 12px;
+  border-radius: 12px;
+  border: 1px solid #E5E5E5;
+  background: #fafafa;
+}
 </style>
 """, unsafe_allow_html=True)
 
@@ -136,7 +151,9 @@ tab1, tab2 = st.tabs(["1) 시작 설정", "2) 플레이"])
 # ===== 시작 설정 =====
 with tab1:
     st.subheader("인물 생성")
-    n = st.number_input("추가할 인물 수(1~12)", 1, 12, 4, 1)
+
+    # ✅ 기본값 2명으로 변경
+    n = st.number_input("추가할 인물 수(1~12)", 1, 12, 2, 1)
 
     with st.form("setup_form"):
         chars = []
@@ -167,6 +184,13 @@ with tab2:
         st.stop()
 
     st.metric("DAY", f"{st.session_state.day}/{MAX_DAYS}")
+
+    # ✅ 인게임 안내(선물 제한)
+    st.markdown(
+        "<div class='notice'>🎁 <b>선물은 하루에 1번, 단 1명에게만</b> 줄 수 있어요.</div>",
+        unsafe_allow_html=True
+    )
+
     st.divider()
 
     # 캐릭터 카드
@@ -179,13 +203,17 @@ with tab2:
         rel = relation_label(score)
         selected = (st.session_state.selected == name)
 
+        fill_color = bar_color(score)
+
         with cols[i % 3]:
             st.markdown(
                 f"""
                 <div class="{'card-selected' if selected else 'card'}">
-                <b>{name}</b> · {c["mbti"]}<br>
-                <div class="pbar-wrap"><div class="pbar-fill" style="width:{pct}%"></div></div>
-                호감도 {score} · {rel}
+                  <b>{name}</b> · {c["mbti"]}<br>
+                  <div class="pbar-wrap">
+                    <div class="pbar-fill" style="width:{pct}%; background:{fill_color};"></div>
+                  </div>
+                  호감도 {score} · {rel}
                 </div>
                 """,
                 unsafe_allow_html=True
@@ -205,7 +233,7 @@ with tab2:
 
     st.subheader(f"🎯 선택된 인물: {sel}")
 
-    # ✅ 팝업처럼 뜨는 상호작용 (popover)
+    # 팝업처럼 뜨는 상호작용 (popover)
     with st.popover("상호작용하기 (행동/선물)"):
         st.caption("행동: 인물당 하루 1회 / 선물: 하루 1회(1명에게만)")
 
@@ -256,7 +284,7 @@ with tab2:
 
     st.divider()
 
-    # ✅ 엔딩보기: 14일 지나야 표시
+    # 엔딩보기: 14일 지나야 표시
     if st.session_state.day >= MAX_DAYS:
         if st.button("엔딩 보기"):
             st.subheader("🎬 엔딩")
