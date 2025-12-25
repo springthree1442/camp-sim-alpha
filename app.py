@@ -1,6 +1,6 @@
 import streamlit as st
 
-st.set_page_config(page_title="N인 합숙 시뮬 (베타2)", layout="wide")
+st.set_page_config(page_title="N인 합숙 시뮬", layout="wide")
 
 MAX_DAYS = 14
 MBTI_LIST = [
@@ -10,7 +10,27 @@ MBTI_LIST = [
     "ISTP","ESTP","ISFP","ESFP"
 ]
 
-# ---------------- 룰(베타1 유지) ----------------
+# ---------------- 한국어 표시 ----------------
+# 내부 로직 키(eng) -> 화면에 보여줄 한국어(행위)
+ACTION_LABEL = {
+    "care": "챙겨주기",
+    "emotion": "감정 공감하기",
+    "logic": "조리 있게 설득하기",
+    "plan": "미래 계획 제안하기",
+    "fun": "재미있는 농담하기",
+    "rule": "규율과 원칙에 대한 이야기",
+}
+
+# 내부 로직 키(eng) -> 화면에 보여줄 한국어(선물)
+GIFT_LABEL = {
+    "sweet": "달콤한 간식",
+    "book": "책",
+    "handmade": "손편지",
+    "practical": "내구성 좋은 필기구",
+    "game": "보드게임",
+}
+
+# ---------------- 룰(내부키는 그대로 유지) ----------------
 MBTI_PREF = {
     "INTJ":"plan","ENTJ":"plan","INTP":"logic","ENTP":"logic",
     "INFJ":"care","ENFJ":"care","INFP":"emotion","ENFP":"emotion",
@@ -40,7 +60,7 @@ def apply_gift(mbti, gtype):
 
 def ending_result(aff):
     if not aff:
-        return "노말엔딩"
+        return "[Normal End]무사히 합숙을 끝마쳤다!"
     scores = list(aff.values())
     top_name = max(aff, key=aff.get)
     top = aff[top_name]
@@ -48,31 +68,31 @@ def ending_result(aff):
     low_cnt = sum(1 for s in scores if s <= -5)
 
     if avg < -3:
-        return "고립엔딩"
+        return "[Bad End] 어떤 캐릭터와도 더이상은 관계를 이을 수 없을 것 같다..."
     if top >= 18 and low_cnt >= max(2, len(scores)//2):
-        return "분열엔딩"
+        return "[Easter Egg] 그렇게 나는 히키코모리가 되었다..."
     if top >= 25:
         return f"특별한 관계 엔딩: {top_name}"
-    return "노말엔딩"
+    return "[Normal End]무사히 합숙을 끝마쳤다!"
 
 # ---------------- 관계 상태(호감도 -> 텍스트) ----------------
 def relation_label(score: int) -> str:
-    # 엔딩 기준(25+)과 분열 조건(18+)에 맞춰 단계 설계
+    if score <= -20:
+        return "혐오하는 사이"
     if score <= -10:
-        return "혐오"
+        return "싫어하는 사이"
     if score <= -5:
-        return "싫어함"
+        return "껄끄러운 사이"
     if score <= 4:
-        return "보통"
-    if score <= 12:
-        return "호감"
-    if score <= 17:
-        return "친함"
+        return "어색한 사이"
+    if score <= 16:
+        return "친한 친구"
     if score <= 24:
+        return "호감 상대"
+    if score <= 35:
         return "설렘"
     return "특별한 관계"
 
-# 호감도 바 표시용(0~100%)
 def affinity_to_percent(score, min_s=-20, max_s=40):
     if score < min_s: score = min_s
     if score > max_s: score = max_s
@@ -82,12 +102,12 @@ def affinity_to_percent(score, min_s=-20, max_s=40):
 def reset_all():
     st.session_state.started = False
     st.session_state.day = 1
-    st.session_state.people = []          # [{"name","mbti"}]
-    st.session_state.aff = {}             # {name: score}
+    st.session_state.people = []
+    st.session_state.aff = {}
     st.session_state.log = []
     st.session_state.selected = None
-    st.session_state.acted_today = set()  # 오늘 행동한 인물
-    st.session_state.gift_used = False    # 오늘 선물 사용 여부
+    st.session_state.acted_today = set()
+    st.session_state.gift_used = False
 
 if "started" not in st.session_state:
     reset_all()
@@ -109,32 +129,24 @@ def next_day():
         st.session_state.gift_used = False
         st.session_state.log.append(f"--- Day {st.session_state.day} 시작 ---")
 
-# ---------------- CSS (분홍 바, 카드 버튼 스타일) ----------------
+# ---------------- CSS ----------------
 st.markdown("""
 <style>
-/* 카드처럼 보이는 버튼 */
-div.stButton > button {
-  width: 100%;
-  text-align: left;
-  border-radius: 14px;
+.card {
   border: 2px solid #E5E5E5;
+  border-radius: 14px;
+  padding: 12px;
+  margin-bottom: 12px;
   background: white;
-  padding: 12px 12px;
-  margin-bottom: 10px;
 }
-
-/* 선택된 카드 강조(선택 상태에서만 아래 클래스를 추가로 렌더링) */
 .card-selected {
   border: 2px solid #ff4fa3 !important;
   background: #fff0f7 !important;
 }
-
-/* 카드 안 텍스트 */
 .card-title { font-size: 18px; font-weight: 800; margin-bottom: 2px; }
 .card-sub { opacity: 0.8; margin-bottom: 8px; }
-.card-meta { font-size: 13px; opacity: 0.85; margin-top: 6px; }
+.card-meta { font-size: 13px; opacity: 0.9; margin-top: 6px; }
 
-/* 분홍 진행 바(HTML 바) */
 .pbar-wrap{
   width: 100%;
   height: 10px;
@@ -151,13 +163,12 @@ div.stButton > button {
 """, unsafe_allow_html=True)
 
 # ---------------- UI ----------------
-st.title("🏠 N인 합숙 시뮬레이션 (베타2)")
+st.title("🏠 N인 합숙 시뮬레이션")
 
 tab1, tab2 = st.tabs(["1) 시작 설정", "2) 플레이"])
 
-# ====== 1) 시작 설정 ======
 with tab1:
-    st.subheader("인물 생성 (MBTI 드롭다운)")
+    st.subheader("인물 생성")
     n = st.number_input("추가할 인물 수(1~12)", 1, 12, 4, 1)
 
     chars = []
@@ -172,7 +183,7 @@ with tab1:
 
     c1, c2 = st.columns([1, 1])
     with c1:
-        if st.button("게임 시작(베타2)", type="primary"):
+        if st.button("게임 시작", type="primary"):
             start_game(chars)
             st.success("시작 완료! '플레이' 탭으로 이동하세요.")
     with c2:
@@ -180,7 +191,6 @@ with tab1:
             reset_all()
             st.info("초기화 완료")
 
-# ====== 2) 플레이 ======
 with tab2:
     if not st.session_state.started:
         st.info("먼저 '시작 설정'에서 게임을 시작하세요.")
@@ -189,8 +199,7 @@ with tab2:
     st.metric("DAY", f"{st.session_state.day} / {MAX_DAYS}")
     st.divider()
 
-    # -------- 캐릭터 카드: 버튼 자체가 카드(누르면 선택) --------
-    st.subheader("👥 캐릭터 카드 (카드를 누르면 바로 선택)")
+    st.subheader("👥 캐릭터 카드")
 
     cols = st.columns(3)
     for idx, c in enumerate(st.session_state.people):
@@ -200,38 +209,30 @@ with tab2:
         pct = affinity_to_percent(score)
         rel = relation_label(score)
         selected = (st.session_state.selected == name)
+        sel_class = "card-selected" if selected else "card"
 
         with cols[idx % 3]:
-            # 버튼을 카드처럼 쓰되, 버튼 텍스트는 비우고 "아래 HTML"로 카드 내용 렌더
-            # 클릭 이벤트는 버튼이 담당
-            if st.button("", key=f"card_{name}"):
-                st.session_state.selected = name
-                st.rerun()
-
-            # 선택 강조를 HTML 영역에서 보여주기
-            sel_class = "card-selected" if selected else ""
             st.markdown(
                 f"""
-                <div class="{sel_class}" style="border-radius:14px; padding:12px; margin-top:-54px;">
+                <div class="{sel_class}">
                   <div class="card-title">{name}</div>
                   <div class="card-sub">MBTI: {mbti}</div>
-
-                  <div class="pbar-wrap">
-                    <div class="pbar-fill" style="width:{pct}%;"></div>
-                  </div>
-
+                  <div class="pbar-wrap"><div class="pbar-fill" style="width:{pct}%;"></div></div>
                   <div class="card-meta">호감도: <b>{score}</b> · 생각: <b>{rel}</b></div>
                 </div>
                 """,
                 unsafe_allow_html=True
             )
 
+            if st.button("이 캐릭터 선택", key=f"pick_{name}"):
+                st.session_state.selected = name
+                st.rerun()
+
     st.divider()
 
-    # -------- 선택된 인물 패널 --------
     sel = st.session_state.selected
     if not sel:
-        st.warning("선택된 인물이 없습니다. 카드에서 인물을 선택하세요.")
+        st.warning("선택된 인물이 없습니다. '이 캐릭터 선택' 버튼으로 선택하세요.")
         st.stop()
 
     sel_mbti = next(p["mbti"] for p in st.session_state.people if p["name"] == sel)
@@ -239,16 +240,24 @@ with tab2:
     left, right = st.columns([1, 1])
 
     with left:
-        st.subheader(f"🗣️ 오늘 행동 (대상: {sel})")
+        st.subheader(f"🗣️ 어떤 행동을 할까? (대상: {sel})")
         st.caption("행동은 **인물당 하루 1회**만 가능합니다.")
-        choice = st.radio("행동 타입", ["care", "emotion", "logic", "plan", "fun", "rule"], horizontal=True)
+
+        action_key = st.radio(
+            "행위를 선택하세요",
+            list(ACTION_LABEL.keys()),
+            format_func=lambda k: ACTION_LABEL[k],
+            horizontal=False
+        )
 
         already_acted = (sel in st.session_state.acted_today)
         if st.button("행동 실행", disabled=already_acted):
-            d = apply_choice(sel_mbti, choice)
+            d = apply_choice(sel_mbti, action_key)
             st.session_state.aff[sel] += d
             st.session_state.acted_today.add(sel)
-            st.session_state.log.append(f"Day {st.session_state.day}: {sel}에게 '{choice}' → {d:+d}")
+            st.session_state.log.append(
+                f"Day {st.session_state.day}: {sel}에게 {ACTION_LABEL[action_key]} → {d:+d}"
+            )
             st.success(f"{sel} 호감도 {d:+d}")
             st.rerun()
 
@@ -258,20 +267,27 @@ with tab2:
     with right:
         st.subheader(f"🎁 선물 (대상: {sel})")
         st.caption("선물은 **하루 1회, 단 1명에게만** 가능합니다.")
-        gift = st.selectbox("선물 타입", ["sweet", "book", "handmade", "practical", "game"])
+
+        gift_key = st.selectbox(
+            "선물을 선택하세요",
+            list(GIFT_LABEL.keys()),
+            format_func=lambda k: GIFT_LABEL[k]
+        )
 
         if st.button("선물 주기", disabled=st.session_state.gift_used):
-            d = apply_gift(sel_mbti, gift)
+            d = apply_gift(sel_mbti, gift_key)
             st.session_state.aff[sel] += d
             st.session_state.gift_used = True
-            st.session_state.log.append(f"Day {st.session_state.day}: {sel}에게 선물({gift}) → {d:+d}")
+            st.session_state.log.append(
+                f"Day {st.session_state.day}: {sel}에게 선물({GIFT_LABEL[gift_key]}) → {d:+d}"
+            )
             st.success(f"{sel} 호감도 {d:+d}")
             st.rerun()
 
         if st.session_state.gift_used:
             st.info("오늘은 이미 선물을 사용했습니다. (하루 1회 제한)")
 
-    # ✅ 요청: 다음 날 버튼을 오늘행동/선물 창 아래로 이동
+    # 다음 날 버튼: 행동/선물 아래
     st.divider()
     n1, n2 = st.columns([1, 2])
     with n1:
@@ -286,8 +302,6 @@ with tab2:
         st.caption("다음 날이 되면: 행동 제한/선물 제한이 초기화됩니다.")
 
     st.divider()
-
-    # -------- 엔딩/로그 --------
     e1, e2 = st.columns([1, 2])
     with e1:
         if st.button("엔딩 보기"):
