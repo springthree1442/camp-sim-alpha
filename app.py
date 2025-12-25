@@ -19,7 +19,6 @@ ACTION_LABEL = {
     "fun": "재미있는 농담하기",
     "rule": "규율과 원칙에 대해 말하기",
 }
-
 GIFT_LABEL = {
     "sweet": "달콤한 간식",
     "book": "책",
@@ -35,7 +34,6 @@ MBTI_PREF = {
     "ISTJ":"rule","ESTJ":"rule","ISFJ":"care","ESFJ":"care",
     "ISTP":"logic","ESTP":"fun","ISFP":"emotion","ESFP":"fun",
 }
-
 CHOICE_EFFECT = {
     "plan": (+8, -2),
     "logic": (+7, -2),
@@ -44,7 +42,6 @@ CHOICE_EFFECT = {
     "fun": (+6, -2),
     "rule": (+6, -3),
 }
-
 GIFT_BASE = {"sweet":4, "book":4, "handmade":5, "practical":4, "game":3}
 MBTI_GIFT_FAV = {"INTJ":"book","INFP":"handmade","ESFP":"game","ISTJ":"practical"}
 
@@ -101,6 +98,7 @@ def reset_all():
     st.session_state.selected = None
     st.session_state.acted_today = set()
     st.session_state.gift_used = False
+    st.session_state.open_modal = False
 
 if "started" not in st.session_state:
     reset_all()
@@ -114,6 +112,7 @@ def start_game(chars):
     st.session_state.selected = chars[0]["name"]
     st.session_state.acted_today = set()
     st.session_state.gift_used = False
+    st.session_state.open_modal = False
 
 def next_day():
     st.session_state.day += 1
@@ -124,9 +123,9 @@ def next_day():
 # ---------------- CSS ----------------
 st.markdown("""
 <style>
-.card {border:2px solid #E5E5E5;border-radius:14px;padding:12px;margin-bottom:12px;}
+.card {border:2px solid #E5E5E5;border-radius:14px;padding:12px;margin-bottom:12px;background:white;}
 .card-selected {border:2px solid #ff4fa3;background:#fff0f7;}
-.pbar-wrap{height:10px;background:#eee;border-radius:999px;}
+.pbar-wrap{height:10px;background:#eee;border-radius:999px;overflow:hidden;}
 .pbar-fill{height:100%;background:#ff4fa3;border-radius:999px;}
 div.stButton>button, div.stFormSubmitButton>button {color:#111 !important;}
 </style>
@@ -140,7 +139,6 @@ tab1, tab2 = st.tabs(["1) 시작 설정", "2) 플레이"])
 # ===== 시작 설정 =====
 with tab1:
     st.subheader("인물 생성")
-
     n = st.number_input("추가할 인물 수(1~12)", 1, 12, 4, 1)
 
     with st.form("setup_form"):
@@ -151,7 +149,7 @@ with tab1:
                 name = st.text_input(f"이름 {i+1}", value=f"인물{i+1}", key=f"name{i}")
             with c2:
                 mbti = st.selectbox(f"MBTI {i+1}", MBTI_LIST, index=6, key=f"mbti{i}")
-            chars.append({"name": name, "mbti": mbti})
+            chars.append({"name": name.strip() if name else f"인물{i+1}", "mbti": mbti})
 
         start_btn = st.form_submit_button("게임 시작")
         reset_btn = st.form_submit_button("전체 초기화")
@@ -173,6 +171,8 @@ with tab2:
     st.metric("DAY", f"{st.session_state.day}/{MAX_DAYS}")
     st.divider()
 
+    # 캐릭터 카드
+    st.subheader("👥 캐릭터 카드")
     cols = st.columns(3)
     for i, c in enumerate(st.session_state.people):
         name = c["name"]
@@ -185,7 +185,7 @@ with tab2:
             st.markdown(
                 f"""
                 <div class="{'card-selected' if selected else 'card'}">
-                <b>{name}</b><br>
+                <b>{name}</b> · {c["mbti"]}<br>
                 <div class="pbar-wrap"><div class="pbar-fill" style="width:{pct}%"></div></div>
                 호감도 {score} · {rel}
                 </div>
@@ -201,41 +201,78 @@ with tab2:
     sel = st.session_state.selected
     mbti = next(p["mbti"] for p in st.session_state.people if p["name"] == sel)
 
-    c1, c2 = st.columns(2)
+    # ✅ 팝업(모달) 열기 버튼
+    if st.button("상호작용하기 (행동/선물)", type="primary"):
+        st.session_state.open_modal = True
+        st.rerun()
 
-    with c1:
-        action = st.radio(
-            "행동 선택",
-            list(ACTION_LABEL.keys()),
-            format_func=lambda k: ACTION_LABEL[k]
-        )
-        if st.button("행동 실행", disabled=sel in st.session_state.acted_today):
-            d = apply_choice(mbti, action)
-            st.session_state.aff[sel] += d
-            st.session_state.acted_today.add(sel)
-            st.session_state.log.append(f"{sel}에게 {ACTION_LABEL[action]} → {d:+d}")
-            st.rerun()
+    # ✅ 팝업(모달) 내용: 행동 + 선물 같은 창에서
+    if st.session_state.open_modal:
+        with st.modal(f"오늘 {sel}에게 무엇을 할까?"):
+            st.caption("행동: 인물당 하루 1회 / 선물: 하루 1회(단 1명)")
 
-    with c2:
-        gift = st.selectbox(
-            "선물 선택",
-            list(GIFT_LABEL.keys()),
-            format_func=lambda k: GIFT_LABEL[k]
-        )
-        if st.button("선물 주기", disabled=st.session_state.gift_used):
-            d = apply_gift(mbti, gift)
-            st.session_state.aff[sel] += d
-            st.session_state.gift_used = True
-            st.session_state.log.append(f"{sel}에게 {GIFT_LABEL[gift]} → {d:+d}")
-            st.rerun()
+            # 행동
+            st.subheader("🗣️ 행동 선택")
+            action = st.radio(
+                "행위를 선택하세요",
+                list(ACTION_LABEL.keys()),
+                format_func=lambda k: ACTION_LABEL[k],
+                key="modal_action"
+            )
+            acted_disabled = (sel in st.session_state.acted_today)
+
+            # 선물
+            st.subheader("🎁 선물 선택")
+            gift = st.selectbox(
+                "선물을 선택하세요",
+                list(GIFT_LABEL.keys()),
+                format_func=lambda k: GIFT_LABEL[k],
+                key="modal_gift"
+            )
+            gift_disabled = st.session_state.gift_used
+
+            c1, c2, c3 = st.columns([1, 1, 1])
+
+            with c1:
+                if st.button("행동 실행", disabled=acted_disabled):
+                    d = apply_choice(mbti, action)
+                    st.session_state.aff[sel] += d
+                    st.session_state.acted_today.add(sel)
+                    st.session_state.log.append(f"{sel}에게 {ACTION_LABEL[action]} → {d:+d}")
+                    st.success(f"행동 완료! 호감도 {d:+d}")
+                    st.rerun()
+
+            with c2:
+                if st.button("선물 주기", disabled=gift_disabled):
+                    d = apply_gift(mbti, gift)
+                    st.session_state.aff[sel] += d
+                    st.session_state.gift_used = True
+                    st.session_state.log.append(f"{sel}에게 선물({GIFT_LABEL[gift]}) → {d:+d}")
+                    st.success(f"선물 완료! 호감도 {d:+d}")
+                    st.rerun()
+
+            with c3:
+                if st.button("닫기"):
+                    st.session_state.open_modal = False
+                    st.rerun()
 
     st.divider()
+
+    # 다음 날
     if st.button("다음 날 ▶️", disabled=st.session_state.day >= MAX_DAYS):
         next_day()
         st.rerun()
 
     st.divider()
-    if st.button("엔딩 보기"):
-        st.write(ending_result(st.session_state.aff))
 
+    # ✅ 엔딩보기는 14일이 지나야만 표시
+    if st.session_state.day >= MAX_DAYS:
+        if st.button("엔딩 보기"):
+            st.subheader("🎬 엔딩")
+            st.write(ending_result(st.session_state.aff))
+    else:
+        st.caption("엔딩은 14일이 모두 지나면 확인할 수 있습니다.")
+
+    st.divider()
+    st.subheader("🧾 로그(최근 30개)")
     st.text("\n".join(st.session_state.log[-30:]))
