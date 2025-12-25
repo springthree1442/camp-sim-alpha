@@ -98,13 +98,17 @@ def ending_result(aff):
     return "[Normal End] 무사히 합숙을 끝마쳤다."
 
 def relation_label(score):
-    if score <= -20: return "혐오"
-    if score <= -10: return "싫어함"
+    if score <= -40: return "혐오"
+    if score <= -35: return "무시"
+    if score <= -19: return "싫어함"
     if score <= -5:  return "불편함"
     if score <= 4:   return "어색함"
-    if score <= 16:  return "친함"
-    if score <= 24:  return "호감"
-    if score <= 35:  return "설렘"
+    if score <= 7:  return "친함"
+    if score <= 35:  return "매우 친함"
+    if score <= 60:  return "약간 호감"
+    if score <= 85: return "호감"
+    if score <= 120: return "설렘"
+    if score <= 188: return "짝사랑"
     return "특별한 관계"
 
 def affinity_to_percent(score, min_s=-20, max_s=40):
