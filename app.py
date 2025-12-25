@@ -55,9 +55,29 @@ def apply_gift(mbti, gtype):
     fav = MBTI_GIFT_FAV.get(mbti)
     return base + (2 if fav == gtype else 0)
 
+SPECIAL_END_TEXT = {
+    “Istj” : “이 말 하기까지 오래 고민했어. 가볍게 하는 말은 아니고 나 너 좋아해.”,
+“Isfj” : “혹시 부담되면 말해줘. 그래도… 네 생각을 자주 하게 돼서, 그냥 말하고 싶었어.",
+“Intj” : “감정적으로 정리해 봤는데, 이건 일시적인 호감은 아닌 것 같아. 좋아해.”,
+“Infj” : “네가 웃을 때마다 마음이 조용해져. 이 감정, 숨기고 싶지 않았어.”,
+“Istp” : “이런 말 잘 안 하는데… 같이 있으면 편하고 좋아. 그래서 널 좋아해.”,
+“Isfp” : “그냥… 네 생각하면 마음이 따뜻해져. 그게 좋아하는 거겠지.”,
+“Intp” : “이 감정이 뭔지 한참 분석해봤는데, 결론은 하나네. 좋아해.”,
+“Infp” : “말로 다 못 설명하겠지만… 너는 내 하루를 바꾸는 사람이야.”,
+“Estj” : “돌려 말 안 할게. 나는 당신이 좋고, 진지하게 만나보고 싶어.”,
+“Esfj” : “네가 웃으면 나도 따라 웃게 돼. 그게 좋아하는 마음인 것 같아.”,
+“Entj” : “시간 낭비는 싫어서 솔직하게 말할게. 너한테 관심 있고, 더 알고 싶어.”,
+“Enfj” : 네가 얼마나 좋은 사람인지 계속 느끼고 있어. 그래서 내 마음도 전하고 싶었어.”,
+“Estp” : “지금 말 안 하면 후회할 것 같아서. 나, 너 좋아해.”,
+“Esfp” : “너랑 있으면 하루가 재밌어져! 그래서… 좋아해..!”,
+“Entp” : “이건 실험 결과인데—네 옆에 있으면 기분이 확실히 좋아져. ...좋아해.”,
+“Enfp” : “이상하게, 네 얘기만 나오면 괜히 웃게 돼. 그게 사랑일지도.”
+}
+
 def ending_result(aff):
     if not aff:
         return "[Normal End] 무사히 합숙을 끝마쳤다."
+
     scores = list(aff.values())
     top_name = max(aff, key=aff.get)
     top = aff[top_name]
@@ -68,8 +88,13 @@ def ending_result(aff):
         return "[Bad End] 누구와도 가까워지지 못했다…"
     if top >= 18 and low_cnt >= max(2, len(scores)//2):
         return "[Easter Egg] 그렇게 나는 히키코모리가 되었다…"
+
     if top >= 25:
-        return f"[Special End] {top_name}과 특별한 관계가 되었다."
+        # ✅ top_name의 MBTI 찾아서 MBTI별 문구 출력
+        top_mbti = next((p["mbti"] for p in st.session_state.people if p["name"] == top_name), "INFP")
+        msg = SPECIAL_END_TEXT.get(top_mbti, "특별한 관계가 되었다.")
+        return f"[Special End] {top_name} - {msg}"
+
     return "[Normal End] 무사히 합숙을 끝마쳤다."
 
 def relation_label(score):
