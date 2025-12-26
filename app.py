@@ -10,7 +10,7 @@ MBTI_LIST = [
     "ISTP","ESTP","ISFP","ESFP"
 ]
 
-# ---------------- 한국어 표시 ----------------
+# ---------------- 행동/선물 ----------------
 ACTION_LABEL = {
     "care": "챙겨주기",
     "emotion": "감정 공감하기",
@@ -55,7 +55,6 @@ def apply_gift(mbti, gtype):
     fav = MBTI_GIFT_FAV.get(mbti)
     return base + (2 if fav == gtype else 0)
 
-# ✅ Special End: MBTI는 반드시 대문자 키로
 SPECIAL_END_TEXT = {
     "ISTJ": "이 말 하기까지 오래 고민했어. 가볍게 하는 말은 아니고… 나 너 좋아해.",
     "ISFJ": "혹시 부담되면 말해줘. 그래도… 네 생각을 자주 하게 돼서, 그냥 말하고 싶었어.",
@@ -75,7 +74,6 @@ SPECIAL_END_TEXT = {
     "ENFP": "이상하게, 네 얘기만 나오면 괜히 웃게 돼. 그게 사랑일지도.",
 }
 
-# ✅ 관계 상태(연인 직전 단계 제거 / 혐오 -30 / 특별한 관계 160+)
 def relation_label(score):
     if score <= -30: return "혐오"
     if score <= -20: return "무시"
@@ -103,7 +101,6 @@ def ending_result(aff):
     if low_cnt >= max(2, len(scores)//2):
         return ["[Easter Egg] 그렇게 나는 히키코모리가 되었다…"]
 
-    # ✅ 특별한 관계일 때만 Special End 출력
     special_people = [
         name for name, score in aff.items()
         if relation_label(score) == "특별한 관계"
@@ -263,10 +260,10 @@ with tab2:
 
     st.subheader(f"🎯 선택된 인물: {sel}")
 
-    with st.popover("상호작용하기 (행동/선물)"):
+    with st.popover("말 걸기 (행동/선물)"):
         st.caption("행동: 인물당 하루 1회 / 선물: 하루 1회(1명에게만)")
 
-        st.markdown("### 🗣️ 행동")
+        st.markdown("### 🗣️ 어떤 말을 해볼까?")
         action = st.radio(
             "행위를 선택하세요",
             list(ACTION_LABEL.keys()),
@@ -285,7 +282,7 @@ with tab2:
             st.success(f"호감도 {d:+d}")
             st.rerun()
 
-        st.markdown("### 🎁 선물")
+        st.markdown("### 🎁 선물(1일 1인 1회 제한)")
         gift = st.selectbox(
             "선물을 선택하세요",
             list(GIFT_LABEL.keys()),
