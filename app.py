@@ -286,7 +286,7 @@ with tab2:
         gift = st.selectbox(
             "선물을 선택하세요",
             list(GIFT_LABEL.keys()),
-            format_func=lambda k: GIFT_LABEL[k],   # ✅ 여기 수정
+            format_func=lambda k: GIFT_LABEL[k],   
             key="gift_pick"
         )
         gift_disabled = st.session_state.gift_used
